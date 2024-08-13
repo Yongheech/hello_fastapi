@@ -1,6 +1,9 @@
-from fastapi import FastAPI
+from typing import List
+
+from fastapi import FastAPI, Depends
+from pydantic import BaseModel
 from sqlalchemy import create_engine, Column, String, Integer
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.orm import sessionmaker, declarative_base, Session
 
 # sqlalchemy
 # 파이썬용 ORM 라이브러리
@@ -28,13 +31,37 @@ class Sungjuk(Base):
 # 데이터베이스 테이블 생성
 Base.metadata.create_all(bind=engine)
 
+# 데이터베이스 세션을 의존성으로 주입하기 위한 함수
+def get_db():
+    db = SessionLocal() # 데이터베이스 세션 객체 생성
+    try:
+        yield db # yield: 파이썬 제너레이터 객체
+                 # 함수가 호출될때 비로소 객체를 반환(넘김)
+    finally:
+        db.close() # 데이터베이스 세션 닫음 (디비 연결해체,리소스 반환)
 
+# pydantic 모델
+class SungjukModel(BaseModel):
+    sjno : int
+    name: str
+    kor: int
+    eng: int
+    mat: int
+# FastAPI 메인
 app = FastAPI()
 
 
 @app.get('/')
 def indext():
     return 'Hello , sqlalchemy!!'
+
+# 성적 조회
+# Depends : 의존성 주입 - 디비 세션 제공
+# => 코드 재사용성 향상, 관리 용이성 향상
+@app.get('/sj', response_model=List[SungjukModel])
+def read_sj(db: Session = Depends(get_db)):
+    sungjuks = db.query(Sungjuk).all()
+    return sungjuks
 
 if __name__ == "__main__":
     import uvicorn
