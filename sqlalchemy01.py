@@ -65,7 +65,7 @@ def read_sj(db: Session = Depends(get_db)):
     return sungjuks
 #성적 추가
 @app.post('/sj', response_model=SungjukModel)
-def readone_sj(sj: SungjukModel, db: Session = Depends(get_db)):
+def sjadd(sj: SungjukModel, db: Session = Depends(get_db)):
     sj = Sungjuk(**dict(sj)) # 클라이언트 전송한 성적데이터가
                              # pydantic으로 유효성 검사후
                              # 데이터베이스에 저장할 수 있도록
@@ -82,17 +82,29 @@ def readone_sj(sj: SungjukModel, db: Session = Depends(get_db)):
 # Depends : 의존성 주입 - 디비 세션 제공
 # => 코드 재사용성 향상, 관리 용이성 향상
 @app.get('/sj,/{sjno}', response_model=Optional[SungjukModel])
-def read_sj(sjno: int, db: Session = Depends(get_db)):
+def readone_sj(sjno: int, db: Session = Depends(get_db)):
     sungjuk = db.query(Sungjuk).filter(Sungjuk.sjno == sjno).first()
     return sungjuk
 # 성적 삭제 - 학생번호로 조회
 # 먼저, 삭제할 학생 데이터가 있는지 확인한 후 삭제 실행
 @app.delete('/sj,/{sjno}', response_model=Optional[SungjukModel])
-def read_sj(sjno: int, db: Session = Depends(get_db)):
+def delete_sj(sjno: int, db: Session = Depends(get_db)):
     sungjuk = db.query(Sungjuk).filter(Sungjuk.sjno == sjno).first()
     if sungjuk:
         db.delete(sungjuk)
         db.commit()
+    return sungjuk
+
+# 성적 수정
+# 먼저, 삭제할 학생 데이터가 있는지 확인한 후 수정 실행
+@app.put('/sj', response_model=Optional[SungjukModel])
+def update_sj(sj:SungjukModel, db: Session = Depends(get_db)):
+    sungjuk = db.query(Sungjuk).filter(Sungjuk.sjno == sj.sjno).first()
+    if sungjuk:
+        for key, val in sj.dict().items():
+            setattr(sungjuk, key, val)
+        db.commit()
+        db.refresh(sungjuk)
     return sungjuk
 
 if __name__ == "__main__":
