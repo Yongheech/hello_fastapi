@@ -62,6 +62,20 @@ def indext():
 def read_sj(db: Session = Depends(get_db)):
     sungjuks = db.query(Sungjuk).all()
     return sungjuks
+#성적 추가
+@app.post('/sj', response_model=SungjukModel)
+def sjadd(sj: SungjukModel, db: Session = Depends(get_db)):
+    sj = Sungjuk(**dict(sj)) # 클라이언트 전송한 성적데이터가
+                             # pydantic으로 유효성 검사후
+                             # 데이터베이스에 저장할 수 있도록
+                             # sqlalchemy 객체로 변환
+    # py: Sungjuk(name=?,kor=?,eng=?,mat=?)
+    # sa: Sungjuk(sj['name'],sj['kor'],sj['eng'],sj['mat'],)
+
+    db.add(sj)
+    db.commit()
+    db.refresh(sj)
+    return sj
 
 if __name__ == "__main__":
     import uvicorn
