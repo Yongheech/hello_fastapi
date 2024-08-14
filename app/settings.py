@@ -5,6 +5,6 @@ class Settings(BaseSettings):
     passwd = ''
     dbname = 'clouds2024'
     dburl = ''
-    sqllit_url = f'sqlite:///app/{dbname}.db'
+    sqlite_url = f'sqlite:///app/{dbname}.db'
 
 config = Settings()
