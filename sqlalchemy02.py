@@ -1,7 +1,8 @@
 from datetime import datetime
 from typing import List, Optional
 
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI
+from fastapi.params import Depends
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, Sequence, func
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
@@ -25,7 +26,7 @@ class Member(Base):
     passwd=Column(String)
     name = Column(String)
     email = Column(String)
-    regdate =Column (DateTime(timezone=True),
+    regdate =Column(DateTime(timezone=True),
                      server_default=func.now())
 
 Base.metadata.create_all(bind=engine)
@@ -38,13 +39,17 @@ def get_db():
     finally:
         db.close()
 
-class MemberModel(BaseModel):
-    mno: int
+class NewMemberModel(BaseModel):
     userid: str
     passwd: str
     name: str
     email: str
+
+
+class MemberModel(NewMemberModel):
+    mno: int
     regdate: datetime
+
 
 app = FastAPI()
 
@@ -54,19 +59,20 @@ def indext():
 
 #회원 조회
 @app.get('/member', response_model=List[MemberModel])
-def readmember(db: Session = Depends(get_db)):
+def read_member(db: Session = Depends(get_db)):
     members = db.query(Member).all()
     return members
 
 #회원 추가
-@app.post('/member', response_model=MemberModel)
-def memberadd(member: MemberModel, db: Session = Depends(get_db)):
-    member = Member(**dict(member))
-
-    db.add(member)
+#@app.post('/member', response_model=NewMemberModel)
+@app.post('/member', response_model=str)
+def add_member(m: NewMemberModel, db: Session = Depends(get_db)):
+    m = Member(**dict(m))
+    db.add(m)
     db.commit()
-    db.refresh(member)
-    return member
+    db.refresh(m)
+    #return m
+    return '데이터 입력 성공!!'
 
 # 회원 상세 조회
 @app.get('/member,/{mno}',response_model=Optional[MemberModel])
@@ -85,14 +91,14 @@ def delete_member(mno : int, db: Session= Depends(get_db)):
 
 # 회원 데이터 수정 - 회원번호로 조회
 # 먼저, 삭제할 회원 데이터가 있는지 확인한 후 수정 실행
-@app.put('/member', response_model=Optional[MemberModel])
-def update_member(mb: MemberModel, db: Session = Depends(get_db)):
-    member = db.query(Member).filter(Member.mno == mb.mno).first()
+@app.put('/member/{mno}', response_model=Optional[MemberModel])
+def update_member(m: MemberModel, db: Session = Depends(get_db)):
+    member = db.query(Member).filter(Member.mno == m.mno).first()
     if member:
-        for key, val in mb.dict().items():
+        for key, val in m.dict().items():
             setattr(member, key, val)
-            db.commit()
-            db.refresh(member)
+        db.commit()
+        db.refresh(member)
     return member
 
 if __name__ == "__main__":
